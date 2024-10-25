@@ -145,6 +145,7 @@ def main():
                             if 0 <= i < GRID_SIZE and 0 <= j < GRID_SIZE:
                                 pygame.draw.rect(screen, (0,0,0), (j * CELL_SIZE, i * CELL_SIZE, CELL_SIZE, CELL_SIZE))
                 pygame.display.update()
+        """        
         while create:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
@@ -160,7 +161,7 @@ def main():
                     pattern = LETTER_PATTERNS_CACHED.get(letter, LETTER_PATTERNS_CACHED[' '])
                     place_pattern(grid, pattern, start_x, current_y)
         grid = update(grid, kernel)
-        
+        """
         screen.fill((0, 0, 0))
         for x in range(GRID_SIZE):
             for y in range(GRID_SIZE):
