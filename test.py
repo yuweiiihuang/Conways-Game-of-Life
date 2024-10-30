@@ -94,7 +94,7 @@ def update(grid, kernel):
             #判斷細胞       
             if grid[x,y]==1:
                 if check_better(x,y):
-                    if neighbor_count[x, y] == 1 or neighbor_count[x, y] == 4:
+                    if neighbor_count[x, y] == 2 or neighbor_count[x, y] == 3:
                         new_grid[x, y] = 1
                 elif check_worse(x,y):
                     if neighbor_count[x, y] == 2:
@@ -260,5 +260,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-
