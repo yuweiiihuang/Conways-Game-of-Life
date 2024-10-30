@@ -9,10 +9,10 @@ CELL_SIZE = 3
 GRID_SIZE = WINDOW_SIZE // CELL_SIZE
 KILL_RADIUS = 4
 BETTER_ZONE_START = (0,0)
-BETTER_ZONE_END = (GRID_SIZE //4, GRID_SIZE // 4)
+BETTER_ZONE_END = (GRID_SIZE//4, GRID_SIZE//4)
 WORSE_ZONE_START = (GRID_SIZE*3 //4, GRID_SIZE*3 // 4)
 WORSE_ZONE_END = (GRID_SIZE,GRID_SIZE)
-"""
+
 OBSTACLE_SIZE = 4
 OBSTACLE_NUM = 10
 
@@ -51,7 +51,7 @@ LETTER_PATTERNS_CACHED = {
     letter: np.array([[1 if char == '1' else 0 for char in bin(row)[2:].zfill(5)] for row in pattern])
     for letter, pattern in LETTER_PATTERNS.items()
 }
-"""
+
 PROBABILITY_ALIVE = [0.8, 0.2]
 #偵測是否在較好的區域(藍色)
 def check_better(x,y):
@@ -77,11 +77,11 @@ def generate_obstacles(grid):
                 print(x,y)
                 break    
     return grid
-
+"""
 def place_pattern(grid, pattern, top_left_x, top_left_y):
     pattern_height, pattern_width = pattern.shape
     grid[top_left_x:top_left_x + pattern_height, top_left_y:top_left_y + pattern_width] = pattern
-"""
+
 #更新地圖
 def update(grid, kernel):
     neighbor_count = convolve2d(grid, kernel, mode='same', boundary='wrap')
@@ -129,9 +129,9 @@ def main():
     # 初始化網格
     grid = np.zeros((GRID_SIZE, GRID_SIZE), dtype=int)
     kernel = np.array([[1, 1, 1], [1, 0, 1], [1, 1, 1]])
-    """
+    
     # 放置文字圖案
-    letters_to_display = "HELLO WORLD"
+    letters_to_display = "GROUP FOUR"
     letter_spacing = 2  # 字母之間的間距
     total_width = sum([LETTER_PATTERNS_CACHED[letter].shape[1] for letter in letters_to_display]) + letter_spacing * (len(letters_to_display) - 1)
     
@@ -146,23 +146,24 @@ def main():
         current_y += pattern.shape[1] + letter_spacing
     top_region = GRID_SIZE //4
     bottom_region = GRID_SIZE //4
-    """
+    
     #地圖歸零
     random_grid = np.zeros((GRID_SIZE, GRID_SIZE), dtype=int)
-    """
+    
     random_grid[:top_region, :] = np.random.choice([0, 1], (top_region, GRID_SIZE), p=PROBABILITY_ALIVE)
     random_grid[-bottom_region:, :] = np.random.choice([0, 1], (bottom_region, GRID_SIZE), p=PROBABILITY_ALIVE)
-    """
+    
     #開場隨機放細胞
+    """
     random_grid = np.random.choice([0, 1], (GRID_SIZE, GRID_SIZE), p=PROBABILITY_ALIVE)
+    """
     grid = np.where(grid == 1, 1, random_grid)
     #grid = generate_obstacles(grid)
     clock = pygame.time.Clock()
-    grid = update(grid, kernel)
     #填顏色(有draw的是上顏色，display就是顯示) 
     screen.fill((0, 0, 0))
-    pygame.draw.rect(screen, (0, 0, 255), (BETTER_ZONE_START[0]*CELL_SIZE,BETTER_ZONE_START[1]*CELL_SIZE, (BETTER_ZONE_END[0]-BETTER_ZONE_START[0])*CELL_SIZE,  (BETTER_ZONE_END[0]-BETTER_ZONE_START[0])*CELL_SIZE))
     pygame.draw.rect(screen, (255, 0, 0), (WORSE_ZONE_START[0]*CELL_SIZE,WORSE_ZONE_START[1]*CELL_SIZE, (WORSE_ZONE_END[0]-WORSE_ZONE_START[0])*CELL_SIZE,  (WORSE_ZONE_END[0]-WORSE_ZONE_START[0])*CELL_SIZE))
+    pygame.draw.rect(screen, (0, 0, 255), (BETTER_ZONE_START[0]*CELL_SIZE,BETTER_ZONE_START[1]*CELL_SIZE, (BETTER_ZONE_END[0]-BETTER_ZONE_START[0])*CELL_SIZE,  (BETTER_ZONE_END[0]-BETTER_ZONE_START[0])*CELL_SIZE))
     for x in range(GRID_SIZE):
         for y in range(GRID_SIZE):
             if grid[x, y] == 1:
@@ -244,8 +245,8 @@ def main():
         #更新數據並填顏色
         grid = update(grid, kernel)
         screen.fill((0, 0, 0))
-        pygame.draw.rect(screen, (0, 0, 255), (BETTER_ZONE_START[0]*CELL_SIZE,BETTER_ZONE_START[1]*CELL_SIZE, (BETTER_ZONE_END[0]-BETTER_ZONE_START[0])*CELL_SIZE,  (BETTER_ZONE_END[0]-BETTER_ZONE_START[0])*CELL_SIZE))
         pygame.draw.rect(screen, (255, 0, 0), (WORSE_ZONE_START[0]*CELL_SIZE,WORSE_ZONE_START[1]*CELL_SIZE, (WORSE_ZONE_END[0]-WORSE_ZONE_START[0])*CELL_SIZE,  (WORSE_ZONE_END[0]-WORSE_ZONE_START[0])*CELL_SIZE))
+        pygame.draw.rect(screen, (0, 0, 255), (BETTER_ZONE_START[0]*CELL_SIZE,BETTER_ZONE_START[1]*CELL_SIZE, (BETTER_ZONE_END[0]-BETTER_ZONE_START[0])*CELL_SIZE,  (BETTER_ZONE_END[0]-BETTER_ZONE_START[0])*CELL_SIZE))
         for x in range(GRID_SIZE):
             for y in range(GRID_SIZE):
                 if grid[x, y] == 1:
@@ -259,4 +260,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
