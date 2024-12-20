@@ -2,17 +2,19 @@ import pygame
 import numpy as np
 from scipy.signal import convolve2d
 import random
-
+import time
 # 設置窗口參數
 WINDOW_SIZE = 600
 CELL_SIZE = 3
 GRID_SIZE = WINDOW_SIZE // CELL_SIZE
 KILL_RADIUS = 4
-BETTER_ZONE_START = (0,0)
-BETTER_ZONE_END = (GRID_SIZE//4, GRID_SIZE//4)
-WORSE_ZONE_START = (GRID_SIZE*3 //4, GRID_SIZE*3 // 4)
-WORSE_ZONE_END = (GRID_SIZE,GRID_SIZE)
-
+#改成用陣列存
+BETTER_ZONE_START = [0,0]
+BETTER_ZONE_END = [GRID_SIZE//4, GRID_SIZE//4]
+WORSE_ZONE_START = [GRID_SIZE*3 //4, GRID_SIZE*3 // 4]
+WORSE_ZONE_END = [GRID_SIZE,GRID_SIZE]
+#INTERVAL可以改變動的速度
+UPDATE_INTERVAL = 0.1
 OBSTACLE_SIZE = 4
 OBSTACLE_NUM = 10
 
@@ -53,11 +55,13 @@ LETTER_PATTERNS_CACHED = {
 }
 
 PROBABILITY_ALIVE = [0.8, 0.2]
+#偵測的部分要XY軸顛倒
 #偵測是否在較好的區域(藍色)
-def check_better(x,y):
+def check_better(y,x):
+    #print(BETTER_ZONE_START[0])
     return BETTER_ZONE_START[0] <= x < BETTER_ZONE_END[0] and BETTER_ZONE_START[1] <= y < BETTER_ZONE_END[1]
 #偵測是否在較差的區域(紅色)
-def check_worse(x,y):
+def check_worse(y,x):
     return WORSE_ZONE_START[0] <= x < WORSE_ZONE_END[0] and WORSE_ZONE_START[1] <= y < WORSE_ZONE_END[1]
 """
 def generate_obstacles(grid):
@@ -126,6 +130,10 @@ def main():
     pygame.init()
     screen = pygame.display.set_mode((WINDOW_SIZE, WINDOW_SIZE))
     pygame.display.set_caption("Game of Life - Pygame")
+    #偵測上次更新的時間
+    last_update = time.time()
+    #顯示細胞數量字的大小
+    font = pygame.font.Font(None, 36)
     # 初始化網格
     grid = np.zeros((GRID_SIZE, GRID_SIZE), dtype=int)
     kernel = np.array([[1, 1, 1], [1, 0, 1], [1, 1, 1]])
@@ -164,6 +172,12 @@ def main():
     screen.fill((0, 0, 0))
     pygame.draw.rect(screen, (255, 0, 0), (WORSE_ZONE_START[0]*CELL_SIZE,WORSE_ZONE_START[1]*CELL_SIZE, (WORSE_ZONE_END[0]-WORSE_ZONE_START[0])*CELL_SIZE,  (WORSE_ZONE_END[0]-WORSE_ZONE_START[0])*CELL_SIZE))
     pygame.draw.rect(screen, (0, 0, 255), (BETTER_ZONE_START[0]*CELL_SIZE,BETTER_ZONE_START[1]*CELL_SIZE, (BETTER_ZONE_END[0]-BETTER_ZONE_START[0])*CELL_SIZE,  (BETTER_ZONE_END[0]-BETTER_ZONE_START[0])*CELL_SIZE))
+     #顯示細胞數量
+    def display_cell_count():
+        cell_count = np.sum(grid == 1)  # 計算細胞的數量
+        cell_count_text = font.render(f"Cell Count: {cell_count}", True, (255,215,0))  # 文字顏色
+        screen.blit(cell_count_text, (200, 320))  # 顯示在螢幕的哪個位置
+    
     for x in range(GRID_SIZE):
         for y in range(GRID_SIZE):
             if grid[x, y] == 1:
@@ -203,19 +217,22 @@ def main():
                     #即時更新在螢幕上
                     pygame.draw.rect(screen, (255, 255, 255), (grid_y * CELL_SIZE, grid_x * CELL_SIZE, CELL_SIZE, CELL_SIZE))
                     pygame.display.update()
-            #按滑鼠右鍵摧毀10*10的區域細胞和障礙物   
+            #按滑鼠右鍵摧毀10*10的區域細胞和障礙物 
+            #這裡判斷的XY一樣要相反  
             if pygame.mouse.get_pressed()[2]:
                 mouse_x, mouse_y = pygame.mouse.get_pos()
-                grid_x, grid_y = mouse_y // CELL_SIZE, mouse_x // CELL_SIZE
-                clear_area(grid,grid_x,grid_y,KILL_RADIUS)  
+                grid_x, grid_y = mouse_y // CELL_SIZE, mouse_x // CELL_SIZE 
                 for i in range(grid_x - KILL_RADIUS, grid_x + KILL_RADIUS + 1):
                         for j in range(grid_y - KILL_RADIUS, grid_y + KILL_RADIUS + 1):
-                            if BETTER_ZONE_START[0] <= i < BETTER_ZONE_END[0] and BETTER_ZONE_START[0] <= j < BETTER_ZONE_END[1]:
+                            if BETTER_ZONE_START[0] <= j < BETTER_ZONE_END[0] and BETTER_ZONE_START[1] <= i < BETTER_ZONE_END[1]:
                                 pygame.draw.rect(screen, (0,0,255), (j * CELL_SIZE, i * CELL_SIZE, CELL_SIZE, CELL_SIZE))
-                            elif WORSE_ZONE_START[0] <= i < WORSE_ZONE_END[0] and WORSE_ZONE_START[0] <= j < WORSE_ZONE_END[1]:
+                            elif WORSE_ZONE_START[0] <= j < WORSE_ZONE_END[0] and WORSE_ZONE_START[1] <= i < WORSE_ZONE_END[1]:
                                 pygame.draw.rect(screen, (255,0,0), (j * CELL_SIZE, i * CELL_SIZE, CELL_SIZE, CELL_SIZE))
-                            elif 0 <= i < GRID_SIZE and 0 <= j < GRID_SIZE:
+                            elif 0 <= i < GRID_SIZE and 0 <= j < GRID_SIZE and grid[i,j]==1:
                                 pygame.draw.rect(screen, (0,0,0), (j * CELL_SIZE, i * CELL_SIZE, CELL_SIZE, CELL_SIZE))
+                            elif 0 <= i < GRID_SIZE and 0 <= j < GRID_SIZE and grid[i,j]==-1:
+                                pygame.draw.rect(screen, (0,0,0), (j * CELL_SIZE, i * CELL_SIZE, CELL_SIZE, CELL_SIZE))     
+                clear_area(grid,grid_x,grid_y,KILL_RADIUS)                 
                 pygame.display.update()
             #按滑鼠滾輪鍵放障礙物(不能放在細胞上)
             if pygame.mouse.get_pressed()[1]:
@@ -225,7 +242,8 @@ def main():
                     grid[grid_x, grid_y] = -1
                     #即時更新在螢幕上
                     pygame.draw.rect(screen, (0, 255, 0), (grid_y * CELL_SIZE, grid_x * CELL_SIZE, CELL_SIZE, CELL_SIZE))
-                    pygame.display.update() 
+                    pygame.display.update()
+                    
         """        
         while create:
             for event in pygame.event.get():
@@ -244,7 +262,38 @@ def main():
         """            
         #更新數據並填顏色
         grid = update(grid, kernel)
-        screen.fill((0, 0, 0))
+        screen.fill((0, 0, 0))  
+        #新加的
+        #偵測執行時間
+        current_time = time.time()
+        #時間大於INTERVAL才會執行，藉此控制速度
+        if current_time - last_update >= UPDATE_INTERVAL:
+            last_update = current_time
+            #讓好壞區域順時針繞著走，一次動一格
+            if BETTER_ZONE_END[0] < GRID_SIZE and BETTER_ZONE_START[1] == 0 :
+                BETTER_ZONE_START[0]=BETTER_ZONE_START[0]+1
+                BETTER_ZONE_END[0]=BETTER_ZONE_END[0]+1
+            elif BETTER_ZONE_END[1] < GRID_SIZE and BETTER_ZONE_END[0] == GRID_SIZE :
+                BETTER_ZONE_START[1]=BETTER_ZONE_START[1]+1
+                BETTER_ZONE_END[1]=BETTER_ZONE_END[1]+1
+            elif BETTER_ZONE_START[0] > 0 and BETTER_ZONE_END[1] == GRID_SIZE :
+                BETTER_ZONE_START[0]=BETTER_ZONE_START[0]-1
+                BETTER_ZONE_END[0]=BETTER_ZONE_END[0]-1
+            elif BETTER_ZONE_END[1] > 0 and BETTER_ZONE_START[0] == 0 :
+                BETTER_ZONE_START[1]=BETTER_ZONE_START[1]-1
+                BETTER_ZONE_END[1]=BETTER_ZONE_END[1]-1
+            if WORSE_ZONE_END[0] < GRID_SIZE and WORSE_ZONE_START[1] == 0 :
+                WORSE_ZONE_START[0]=WORSE_ZONE_START[0]+1
+                WORSE_ZONE_END[0]=WORSE_ZONE_END[0]+1
+            elif WORSE_ZONE_END[1] < GRID_SIZE and WORSE_ZONE_END[0] == GRID_SIZE :
+                WORSE_ZONE_START[1]=WORSE_ZONE_START[1]+1
+                WORSE_ZONE_END[1]=WORSE_ZONE_END[1]+1
+            elif WORSE_ZONE_START[0] > 0 and WORSE_ZONE_END[1] == GRID_SIZE :
+                WORSE_ZONE_START[0]=WORSE_ZONE_START[0]-1
+                WORSE_ZONE_END[0]=WORSE_ZONE_END[0]-1
+            elif WORSE_ZONE_END[1] > 0 and WORSE_ZONE_START[0] == 0 :
+                WORSE_ZONE_START[1]=WORSE_ZONE_START[1]-1
+                WORSE_ZONE_END[1]=WORSE_ZONE_END[1]-1   
         pygame.draw.rect(screen, (255, 0, 0), (WORSE_ZONE_START[0]*CELL_SIZE,WORSE_ZONE_START[1]*CELL_SIZE, (WORSE_ZONE_END[0]-WORSE_ZONE_START[0])*CELL_SIZE,  (WORSE_ZONE_END[0]-WORSE_ZONE_START[0])*CELL_SIZE))
         pygame.draw.rect(screen, (0, 0, 255), (BETTER_ZONE_START[0]*CELL_SIZE,BETTER_ZONE_START[1]*CELL_SIZE, (BETTER_ZONE_END[0]-BETTER_ZONE_START[0])*CELL_SIZE,  (BETTER_ZONE_END[0]-BETTER_ZONE_START[0])*CELL_SIZE))
         for x in range(GRID_SIZE):
@@ -253,6 +302,7 @@ def main():
                     pygame.draw.rect(screen, (255, 255, 255), (y * CELL_SIZE, x * CELL_SIZE, CELL_SIZE, CELL_SIZE))
                 if grid[x,y] == -1:
                     pygame.draw.rect(screen, (0, 255, 0), (y * CELL_SIZE, x * CELL_SIZE, CELL_SIZE, CELL_SIZE))
+        display_cell_count()#顯示細胞數量
         pygame.display.flip()
         clock.tick(10)  # 控制更新速度
 
