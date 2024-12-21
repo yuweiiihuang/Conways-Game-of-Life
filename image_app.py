@@ -1,3 +1,5 @@
+import argparse
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
@@ -80,6 +82,13 @@ def image_to_grid_with_edges(image_path, grid_size):
     :param grid_size: 網格大小。
     :return: 邊緣檢測後的二值化網格。
     """
+    if image_path is None:
+        # 使用預設圖片
+        image_path = "examples/為什麼要演奏春日影.jpeg"
+        if not os.path.exists(image_path):
+            print(f"預設圖片 {image_path} 不存在，請提供圖片路徑。")
+            return
+    
     # 讀取圖片並轉為灰階模式
     img = Image.open(image_path).convert('L')
     img = img.resize((grid_size, grid_size), Image.Resampling.LANCZOS)  # 調整大小
@@ -96,7 +105,7 @@ def image_to_grid_with_edges(image_path, grid_size):
     suppressed = non_max_suppression(gradient, theta)
     
     # 二值化邊緣檢測結果
-    threshold = 0.01 * suppressed.max()
+    threshold = 0.025 * suppressed.max()
     binary_edges = (suppressed > threshold).astype(int)
     return binary_edges
 
@@ -145,7 +154,14 @@ def main_with_image(image_path, grid_size=200, pause_duration=3):
 
 if __name__ == '__main__':
     # 使用指定圖片運行生命遊戲
-    main_with_image('../為什麼要演奏春日影.jpeg', grid_size=500, pause_duration=3)
+    parser = argparse.ArgumentParser(description="基於圖片的康威生命遊戲")
+    parser.add_argument('--image', type=str, help='圖片路徑', default=None)
+    parser.add_argument('--grid-size', type=int, help='網格大小', default=500)
+    parser.add_argument('--pause-duration', type=int, help='暫停秒數', default=3)
+    args = parser.parse_args()
+
+    # 執行主函式
+    main_with_image(image_path=args.image, grid_size=args.grid_size, pause_duration=args.pause_duration)
 
 # 是又怎樣.jpeg
 # 
