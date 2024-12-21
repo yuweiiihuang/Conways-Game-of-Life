@@ -96,7 +96,7 @@ def image_to_grid_with_edges(image_path, grid_size):
     suppressed = non_max_suppression(gradient, theta)
     
     # 二值化邊緣檢測結果
-    threshold = 10
+    threshold = 0.01 * suppressed.max()
     binary_edges = (suppressed > threshold).astype(int)
     return binary_edges
 

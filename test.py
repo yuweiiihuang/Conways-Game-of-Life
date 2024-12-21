@@ -1,6 +1,8 @@
 import pygame
 import numpy as np
 from scipy.signal import convolve2d
+from PIL import Image
+import os
 import random
 import time
 # 設置窗口參數
@@ -17,6 +19,56 @@ WORSE_ZONE_END = [GRID_SIZE,GRID_SIZE]
 UPDATE_INTERVAL = 0.1
 OBSTACLE_SIZE = 4
 OBSTACLE_NUM = 10
+
+# 預設圖案的存放資料夾
+IMAGE_FOLDER = "patterns"
+
+# 載入圖片並轉換為網格
+def image_to_grid(image_path, grid_size):
+    """
+    將圖片轉換為二值化網格。
+    :param image_path: 圖片路徑。
+    :param grid_size: 網格大小。
+    :return: 二值化網格。
+    """
+    img = Image.open(image_path).convert('L')
+    img = img.resize((grid_size, grid_size), Image.Resampling.LANCZOS)
+    img_array = np.array(img)
+    threshold = 128
+    grid = (img_array > threshold).astype(int)
+    return grid 
+
+def load_patterns(image_folder, grid_sizes):
+    """
+    預處理圖片資料夾中的所有圖片，生成對應的二值化網格。
+    :param image_folder: 圖片資料夾。
+    :param grid_sizes: 每個圖案對應的網格大小陣列。
+    :return: 包含所有圖片網格的字典。
+    """
+    patterns = {}
+    for i, filename in enumerate(sorted(os.listdir(image_folder))):
+        if filename.lower().endswith(('.png', '.jpg', '.jpeg')):
+            file_path = os.path.join(image_folder, filename)
+            grid_size = grid_sizes[i]
+            patterns[i] = image_to_grid(file_path, grid_size)
+    return patterns
+
+def place_pattern(grid, pattern, center_x, center_y):
+    """
+    將圖案放置到指定中心位置。
+    :param grid: 主網格。
+    :param pattern: 圖案網格。
+    :param center_x: 圖案的中心 x 座標。
+    :param center_y: 圖案的中心 y 座標。
+    """
+    pattern_height, pattern_width = pattern.shape
+    top_left_x = center_x - pattern_height // 2
+    top_left_y = center_y - pattern_width // 2
+
+    if top_left_x < 0 or top_left_y < 0 or top_left_x + pattern_height > grid.shape[0] or top_left_y + pattern_width > grid.shape[1]:
+        raise ValueError("圖案超出邊界")
+
+    grid[top_left_x:top_left_x + pattern_height, top_left_y:top_left_y + pattern_width] = pattern
 
 # 定義字母圖案
 LETTER_PATTERNS = {
@@ -82,9 +134,11 @@ def generate_obstacles(grid):
                 break    
     return grid
 """
+"""
 def place_pattern(grid, pattern, top_left_x, top_left_y):
     pattern_height, pattern_width = pattern.shape
     grid[top_left_x:top_left_x + pattern_height, top_left_y:top_left_y + pattern_width] = pattern
+"""
 
 #更新地圖
 def update(grid, kernel):
@@ -138,6 +192,13 @@ def main():
     grid = np.zeros((GRID_SIZE, GRID_SIZE), dtype=int)
     kernel = np.array([[1, 1, 1], [1, 0, 1], [1, 1, 1]])
     
+    # 設定每個圖案的 grid_size
+    # [脈衝星, 高斯帕機槍, 太空船, 慨影, 紅綠燈, 人, 工, 智, 慧, 四]
+    grid_sizes = [17, 36, 5, 12, 9, 16, 16, 16, 16, 16]
+
+    # 載入圖案
+    patterns = load_patterns(IMAGE_FOLDER, grid_sizes)
+    
     # 放置文字圖案
     letters_to_display = "GROUP FOUR"
     letter_spacing = 2  # 字母之間的間距
@@ -189,24 +250,62 @@ def main():
     pause = True
     create = False
     while running:
-        #讀按鍵
+        # 處理事件
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            #按p暫停    
             if event.type == pygame.KEYDOWN and event.key == pygame.K_p:
                 pause = True
-            """       
-            if pygame.mouse.get_pressed()[0]:
-                create = True
-            """       
-        #在p狀態下進行        
+        
+        # 暫停狀態處理     
         while pause:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    quit()
-                if event.type == pygame.KEYDOWN and event.key == pygame.K_p:
+                    running = False
                     pause = False
+                elif event.type == pygame.KEYDOWN and event.key == pygame.K_p:
+                    pause = False
+                if event.type == pygame.KEYDOWN and pygame.K_0 <= event.key <= pygame.K_9:
+                    num = event.key - pygame.K_0
+                    if num in patterns:
+                        mouse_x, mouse_y = pygame.mouse.get_pos()
+                        grid_x, grid_y = mouse_y // CELL_SIZE, mouse_x // CELL_SIZE
+                        try:
+                            # 放置圖案
+                            place_pattern(grid, patterns[num], grid_x, grid_y)
+
+                            # 計算受影響區域的範圍
+                            pattern_height, pattern_width = patterns[num].shape
+                            min_x = max(0, grid_x - pattern_height // 2)
+                            max_x = min(GRID_SIZE, grid_x + pattern_height // 2)
+                            min_y = max(0, grid_y - pattern_width // 2)
+                            max_y = min(GRID_SIZE, grid_y + pattern_width // 2)
+
+                            # 重繪受影響區域
+                            for x in range(min_x, max_x):
+                                for y in range(min_y, max_y):
+                                    if grid[x, y] == 1:
+                                        color = (255, 255, 255)
+                                    elif grid[x, y] == -1:
+                                        color = (0, 255, 0)
+                                    else:
+                                        color = (0, 0, 0)
+                                    pygame.draw.rect(screen, color, (y * CELL_SIZE, x * CELL_SIZE, CELL_SIZE, CELL_SIZE))
+
+                            # 重繪紅藍區域（僅繪製邊框）
+                            pygame.draw.rect(screen, (255, 0, 0), 
+                                            (WORSE_ZONE_START[0] * CELL_SIZE, WORSE_ZONE_START[1] * CELL_SIZE, 
+                                            (WORSE_ZONE_END[0] - WORSE_ZONE_START[0]) * CELL_SIZE, 
+                                            (WORSE_ZONE_END[1] - WORSE_ZONE_START[1]) * CELL_SIZE), width=1)  # 設定線框寬度
+                            pygame.draw.rect(screen, (0, 0, 255), 
+                                            (BETTER_ZONE_START[0] * CELL_SIZE, BETTER_ZONE_START[1] * CELL_SIZE, 
+                                            (BETTER_ZONE_END[0] - BETTER_ZONE_START[0]) * CELL_SIZE, 
+                                            (BETTER_ZONE_END[1] - BETTER_ZONE_START[1]) * CELL_SIZE), width=1)  # 設定線框寬度
+
+                            pygame.display.update()  # 即時刷新受影響的部分
+                        except ValueError:
+                            print("無法放置圖案，超出邊界")
+                        
             #按滑鼠左鍵生成細胞(不能放障礙物上)      
             if pygame.mouse.get_pressed()[0]:
                 #偵測滑鼠位置
